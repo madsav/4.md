@@ -1,0 +1,209 @@
+
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>MD4 </title>
+	<style>
+			body { margin: 0;  overflow: hidden}
+			canvas { width: 100%; height: 100% }
+	</style>
+	</head>
+	<body>
+		<script src="three.min.js"></script>
+		<script src="three.js"></script>
+		<script src="OrbitControls.js"></script>
+		<script src="GLTFLoader.js"></script>
+		<script src="PMREMGenerator.js"></script>
+		<script src="PMREMCubeUVPacker.js"></script>
+		<script src="DragControls.js"></script>
+		<script src="stats.js"></script>
+		<div style="position:absolute;  top: 150px; color:white;" id="dist">Distance: 0</div>
+		
+		<script>
+//kamera	
+		var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight,  0.1, 100 );
+		camera.position.z = 10;	
+//scēna		
+		var scene = new THREE.Scene();	
+var bumba = [];		
+//gaisma
+var light = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(light);		
+var light2 = new THREE.PointLight(0xffffff, 0.5);
+scene.add(light2);						
+//fons un modeļi	
+var pics= [ 'posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg' ];
+				var loader = new THREE.CubeTextureLoader().setPath( 'textures/' );
+				loader.load( pics, function ( texture ) {
+					var pmremGenerator = new THREE.PMREMGenerator( texture );
+					pmremGenerator.update( renderer );
+					var pmremCubeUVPacker = new THREE.PMREMCubeUVPacker( pmremGenerator.cubeLods );
+					pmremCubeUVPacker.update( renderer );
+					var envMap = pmremCubeUVPacker.CubeUVRenderTarget.texture;
+					// model
+					var loader = new THREE.GLTFLoader();
+					loader.load( 'dog.glb', function ( gltf ) {
+				//	loader.load( 'model.gltf', function ( gltf ) {
+						gltf.scene.traverse( function ( dog ) {
+							if ( dog.isMesh ) {
+								dog.material.envMap = envMap;
+								dog.scale.set(2,2,2);
+							}
+						} );
+						scene.add( gltf.scene );
+					} );
+					pmremGenerator.dispose();
+					pmremCubeUVPacker.dispose();
+					scene.background = texture;
+				} );
+
+
+	var balloon_geom = new THREE.SphereGeometry(0.4, 40, 40);
+	
+	for (var b=0; b<10; b++){
+	var balloon = new  THREE.Mesh(balloon_geom,  new THREE.MeshLambertMaterial( { color: Math.random()*0xffffff} ));
+//	balloon = new THREE.Mesh(balloon_geom, balloon_mat);
+	balloon.position.x = Math.random() *10-5;
+	balloon.position.y = Math.random() *6-3;
+	balloon.position.z = Math.random() * 8-4;	
+	scene.add(balloon); 
+	bumba.push (balloon);
+}
+function createball() {
+	var ball_geom = new THREE.SphereGeometry(0.5, 40, 40);
+	var ball_mat = new  THREE.MeshPhongMaterial( { color: 0xfF9F541  , emissive: 0x333333, flatShading: true } );
+	ball = new THREE.Mesh(ball_geom, ball_mat);
+
+	scene.add( ball ); 
+//	bumba.push (ball);
+	
+	};
+	createball();
+	
+//renderer		
+	var renderer = new THREE.WebGLRenderer();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		document.body.appendChild(renderer.domElement );
+	//	renderer.setClearColor(new THREE.Color(0x000000));
+		renderer.setClearColor(new THREE.Color(0xEEEEEE));
+//controls	
+	var controls = new THREE.DragControls(bumba, camera, renderer.domElement);	
+    controls2 = new THREE.OrbitControls( camera );
+				//controls2.target.set( 0, - 0.2, - 0.2 );	
+				//controls2.update();
+				//	controls.addEventListener( 'dragstart', dragStartCallback );
+				//	controls.addEventListener( 'dragend', dragendCallback );
+				//	function dragStartCallback(event) {	}
+				//function dragendCallback(event) {}
+				//frames per second
+	var container, stats;
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	stats = new Stats();
+	container.appendChild( stats.dom );
+	container.appendChild( renderer.domElement )
+//distance	
+document.addEventListener("mousedown", Mouseclick, false);
+  function geom (geometry) {
+    var mat = new THREE.MeshStandardMaterial({
+      color: 0xFFFFFF,
+      flatShading: true
+    });
+    var mesh = new THREE.Mesh(geometry, mat);
+
+    mesh.position.y = 0.012;
+    mesh.position.z = 0.003;
+    mesh.rotation.x = Math.PI / 2;
+    mesh.scale.multiplyScalar(0.01);
+
+    scene.add(mesh);
+  };
+  geom();
+var points = [
+  new THREE.Vector3(),
+  new THREE.Vector3()
+]
+var clicks = 0;
+
+var markerA = new THREE.Mesh(
+  new THREE.SphereGeometry(0.1, 10, 20),
+  new THREE.MeshBasicMaterial({
+    color: 0xFFFFFF
+  }));
+var markerB = markerA.clone();
+var markers = [
+  markerA, markerB
+];
+scene.add(markerA);
+scene.add(markerB);
+
+var lineGeometry = new THREE.Geometry();
+lineGeometry.vertices.push(new THREE.Vector3());
+lineGeometry.vertices.push(new THREE.Vector3());
+var lineMaterial = new THREE.LineBasicMaterial({
+  color: 0xFFFFFF
+});
+var line = new THREE.Line(lineGeometry, lineMaterial);
+scene.add(line);
+
+function getIntersec(event) {
+  var vector = new THREE.Vector2();
+  vector.set(
+    event.clientX / window.innerWidth * 2 - 1,
+	-(event.clientY / window.innerHeight) * 2 + 1
+  );
+  var raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(vector, camera);
+  var intersects = raycaster.intersectObjects(scene.children);
+  return intersects;
+}
+function setLine(vectorA, vectorB) {
+  line.geometry.vertices[0].copy(vectorA);
+  line.geometry.vertices[1].copy(vectorB);
+  line.geometry.verticesNeedUpdate = true;
+}
+function Mouseclick(event) {
+  var intersects = getIntersec(event);
+  if (intersects.length > 0) {
+    points[clicks].copy(intersects[0].point);
+    markers[clicks].position.copy(intersects[0].point);
+    setLine(intersects[0].point, intersects[0].point);
+    clicks++;
+    if (clicks > 1){
+      var distance = points[0].distanceTo(points[1]);
+      dist.innerText = distance;
+      setLine(points[0], points[1]);
+      clicks = 0;
+    }
+  }
+}
+
+	
+		
+	function animate () {
+	requestAnimationFrame(() => this.animate());
+	renderer.render( scene, camera );
+	//requestAnimationFrame(renderer);
+	 // controls.update();
+	 var timer = Date.now() * 0.01;
+	 scene.position.y = (-3);
+	
+	ball.position.set(
+				Math.cos( timer * 0.1 ) * 4,
+				Math.abs( Math.cos( timer * 0.2 ) ) * 1 + 0,
+				Math.sin( timer * 0.1 ) * 4
+			);
+			
+				ball.rotation.y = ( Math.PI / 2 ) - timer * 0.1;
+				ball.rotation.z = timer * 0.8;
+			stats.update();
+	
+		};
+			
+		animate();	
+		
+		
+		</script>
+
+	</body>
+</html>
